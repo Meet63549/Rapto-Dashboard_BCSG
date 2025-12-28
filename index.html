@@ -3,10 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gujarat Raptor Survey - Field Data Collection</title>
+    <title>Gujarat Raptor Survey - Analytics Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -21,6 +25,7 @@
             --success-dark: #047857;
             --danger: #dc2626;
             --warning: #d97706;
+            --info: #0891b2;
             --text: #1f2937;
             --text-light: #6b7280;
             --bg: #f9fafb;
@@ -38,9 +43,9 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1600px;
             margin: 0 auto;
-            padding: 0 1rem;
+            padding: 0 1.5rem;
         }
 
         .header {
@@ -57,6 +62,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
         }
 
         .logo {
@@ -90,6 +97,79 @@
             font-weight: 500;
         }
 
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.875rem;
+            background: #d1fae5;
+            color: #065f46;
+            border-radius: 20px;
+            font-size: 0.8125rem;
+            font-weight: 600;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: var(--success-dark);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
         .main {
             padding: 2rem 0 4rem;
         }
@@ -110,6 +190,69 @@
             font-size: 1rem;
         }
 
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: var(--shadow);
+        }
+
+        .stat-icon-wrapper {
+            width: 52px;
+            height: 52px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .stat-icon-wrapper.primary {
+            background: rgba(30, 64, 175, 0.1);
+            color: var(--primary);
+        }
+
+        .stat-icon-wrapper.success {
+            background: rgba(5, 150, 105, 0.1);
+            color: var(--success);
+        }
+
+        .stat-icon-wrapper.warning {
+            background: rgba(217, 119, 6, 0.1);
+            color: var(--warning);
+        }
+
+        .stat-icon-wrapper.info {
+            background: rgba(8, 145, 178, 0.1);
+            color: var(--info);
+        }
+
+        .stat-content h3 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1;
+        }
+
+        .stat-content p {
+            font-size: 0.8125rem;
+            color: var(--text-light);
+            font-weight: 500;
+            margin-top: 0.25rem;
+        }
+
         .card {
             background: var(--card);
             border: 1px solid var(--border);
@@ -121,11 +264,19 @@
 
         .card-header {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 0.75rem;
             margin-bottom: 1.5rem;
             padding-bottom: 1rem;
             border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .card-title-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
 
         .card-icon {
@@ -145,463 +296,356 @@
             color: var(--text);
         }
 
-        .form-grid {
+        #map {
+            height: 500px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card);
+        }
+
+        thead {
+            background: var(--bg);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-size: 0.8125rem;
+            font-weight: 700;
+            color: var(--text);
+            border-bottom: 1px solid var(--border);
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        td {
+            padding: 1rem;
+            font-size: 0.9375rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: var(--bg);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.625rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-primary {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .species-breakdown {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1.25rem;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
         }
 
-        .form-group {
+        .species-stat {
+            padding: 1rem;
+            background: var(--bg);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .species-stat-header {
             display: flex;
-            flex-direction: column;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 0.5rem;
         }
 
-        .form-group.full-width {
-            grid-column: 1 / -1;
+        .species-stat h4 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text);
         }
 
-        .form-label {
+        .species-stat p {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            font-style: italic;
+        }
+
+        .species-count {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 1rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-light);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .empty-state h3 {
+            font-size: 1.125rem;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .species-breakdown {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Delete Confirmation Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+            padding: 0;
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 1rem;
+        }
+
+        .modal-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            background: rgba(220, 38, 38, 0.1);
+            color: var(--danger);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .modal-title {
+            flex: 1;
+        }
+
+        .modal-title h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.25rem;
+        }
+
+        .modal-title p {
+            font-size: 0.875rem;
+            color: var(--text-light);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-body p {
+            color: var(--text);
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .modal-body strong {
+            color: var(--danger);
+        }
+
+        .confirmation-input {
+            margin-top: 1rem;
+        }
+
+        .confirmation-input label {
+            display: block;
             font-size: 0.875rem;
             font-weight: 600;
             color: var(--text);
             margin-bottom: 0.5rem;
         }
 
-        .form-label .required {
-            color: var(--danger);
-        }
-
-        .form-input,
-        .form-select {
+        .confirmation-input input {
             width: 100%;
             padding: 0.75rem 1rem;
-            border: 1.5px solid var(--border);
+            border: 2px solid var(--border);
             border-radius: 8px;
             font-size: 0.9375rem;
-            font-family: inherit;
-            background: var(--card);
-            color: var(--text);
-            transition: all 0.2s;
-        }
-
-        .form-input:focus,
-        .form-select:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
-        }
-
-        .form-input[readonly] {
-            background: var(--bg);
-            color: var(--text-light);
-            cursor: default;
-        }
-
-        .form-input::placeholder {
-            color: #9ca3af;
-        }
-
-        .input-icon {
-            position: relative;
-        }
-
-        .input-icon i {
-            position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-light);
-        }
-
-        .input-icon .form-input {
-            padding-left: 2.75rem;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.9375rem;
+            font-family: 'Courier New', monospace;
             font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-family: inherit;
-            text-decoration: none;
         }
 
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        .confirmation-input input:focus {
+            outline: none;
+            border-color: var(--danger);
         }
 
-        .btn-primary {
-            background: var(--primary);
-            color: white;
+        .modal-footer {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
         }
 
-        .btn-primary:hover:not(:disabled) {
-            background: var(--primary-dark);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .btn-success {
-            background: var(--success);
-            color: white;
-        }
-
-        .btn-success:hover:not(:disabled) {
-            background: var(--success-dark);
-        }
-
-        .btn-outline {
+        .btn-outline-secondary {
             background: transparent;
             border: 1.5px solid var(--border);
             color: var(--text);
         }
 
-        .btn-outline:hover {
+        .btn-outline-secondary:hover {
             background: var(--bg);
-            border-color: var(--primary);
-            color: var(--primary);
         }
 
-        .btn-lg {
-            padding: 1rem 2rem;
-            font-size: 1rem;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.25rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .stat-icon-wrapper {
-            width: 48px;
-            height: 48px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-        }
-
-        .stat-icon-wrapper.primary {
-            background: rgba(30, 64, 175, 0.1);
-            color: var(--primary);
-        }
-
-        .stat-icon-wrapper.success {
-            background: rgba(5, 150, 105, 0.1);
-            color: var(--success);
-        }
-
-        .stat-icon-wrapper.warning {
-            background: rgba(217, 119, 6, 0.1);
-            color: var(--warning);
-        }
-
-        .stat-content h3 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: var(--text);
-            line-height: 1;
-        }
-
-        .stat-content p {
-            font-size: 0.8125rem;
-            color: var(--text-light);
-            font-weight: 500;
-            margin-top: 0.25rem;
-        }
-
-        .species-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1rem;
-        }
-
-        .species-card {
-            background: var(--card);
-            border: 1.5px solid var(--border);
-            border-radius: 10px;
-            padding: 1rem;
-            transition: all 0.2s;
-        }
-
-        .species-card:hover {
-            border-color: var(--primary);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-
-        .species-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: start;
-            margin-bottom: 0.75rem;
-        }
-
-        .species-info h4 {
-            font-size: 0.9375rem;
-            font-weight: 600;
-            color: var(--text);
-            margin-bottom: 0.25rem;
-        }
-
-        .species-info p {
-            font-size: 0.8125rem;
-            color: var(--text-light);
-            font-style: italic;
-        }
-
-        .species-badge {
-            padding: 0.25rem 0.625rem;
-            border-radius: 12px;
-            font-size: 0.6875rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.025em;
-        }
-
-        .species-badge.common {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .species-badge.rare {
+        .warning-box {
             background: #fef3c7;
-            color: #92400e;
-        }
-
-        .counter-wrapper {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0.75rem;
-            background: var(--bg);
-            border-radius: 8px;
-        }
-
-        .counter-btn {
-            width: 36px;
-            height: 36px;
-            border: none;
+            border-left: 4px solid #d97706;
+            padding: 1rem;
             border-radius: 6px;
-            font-size: 1.25rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            margin-bottom: 1rem;
         }
 
-        .counter-btn.minus {
-            background: #fee2e2;
-            color: var(--danger);
-        }
-
-        .counter-btn.minus:hover:not(:disabled) {
-            background: #fecaca;
-        }
-
-        .counter-btn.minus:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-        }
-
-        .counter-btn.plus {
-            background: #d1fae5;
-            color: var(--success);
-        }
-
-        .counter-btn.plus:hover {
-            background: #a7f3d0;
-        }
-
-        .counter-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--text);
-            min-width: 40px;
-            text-align: center;
-        }
-
-        .search-wrapper {
-            position: relative;
-            margin-bottom: 1.5rem;
-        }
-
-        .search-wrapper i {
-            position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-light);
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 0.875rem 1rem 0.875rem 2.75rem;
-            border: 1.5px solid var(--border);
-            border-radius: 8px;
-            font-size: 0.9375rem;
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .notification {
-            position: fixed;
-            top: 2rem;
-            right: 2rem;
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-left: 4px solid var(--success);
-            padding: 1rem 1.25rem;
-            border-radius: 8px;
-            box-shadow: var(--shadow-lg);
-            z-index: 1001;
-            display: none;
-            min-width: 300px;
-        }
-
-        .notification.show {
-            display: flex;
-            align-items: start;
-            gap: 0.75rem;
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        .notification-icon {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--success);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
-            flex-shrink: 0;
-        }
-
-        .notification-content {
-            flex: 1;
-        }
-
-        .notification-content p {
+        .warning-box p {
+            margin: 0;
+            color: #92400e;
             font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--text);
+            font-weight: 500;
         }
 
-        .action-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .section {
-            display: none;
-        }
-
-        .section.active {
-            display: block;
-        }
-
-        .help-text {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.8125rem;
-            color: var(--text-light);
-            margin-top: 0.375rem;
-        }
-
-        .help-text i {
-            font-size: 0.875rem;
-        }
-
-        @media (max-width: 768px) {
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            .species-grid {
-                grid-template-columns: 1fr;
-            }
-            .logo-text h1 {
-                font-size: 1rem;
-            }
-            .notification {
-                right: 1rem;
-                left: 1rem;
-                min-width: auto;
-            }
-        }
-
-        /* Accessibility */
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border-width: 0;
-        }
-
-        *:focus-visible {
-            outline: 2px solid var(--primary);
-            outline-offset: 2px;
+        .warning-box i {
+            margin-right: 0.5rem;
         }
     </style>
 </head>
 <body>
-    <div id="notification" class="notification">
-        <div class="notification-icon">
-            <i class="fas fa-check"></i>
-        </div>
-        <div class="notification-content">
-            <p id="notificationText"></p>
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="modal-title">
+                    <h3>Delete All Survey Data</h3>
+                    <p>This action cannot be undone</p>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="warning-box">
+                    <p>
+                        <i class="fas fa-exclamation-circle"></i>
+                        <strong>Warning:</strong> This will permanently delete all survey records, including team data, bird counts, and GPS locations.
+                    </p>
+                </div>
+                <p>
+                    You are about to delete <strong id="deleteCount">0</strong> survey records. 
+                    This will remove all collected data from the database.
+                </p>
+                <p>
+                    <strong>We strongly recommend exporting your data before proceeding.</strong>
+                </p>
+                <div class="confirmation-input">
+                    <label for="confirmText">
+                        Type <strong>DELETE ALL DATA</strong> to confirm:
+                    </label>
+                    <input 
+                        type="text" 
+                        id="confirmText" 
+                        placeholder="DELETE ALL DATA"
+                        autocomplete="off"
+                    >
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeDeleteModal()" class="btn btn-outline-secondary">
+                    <i class="fas fa-times"></i>
+                    Cancel
+                </button>
+                <button onclick="confirmDeleteAll()" class="btn btn-danger" id="confirmDeleteBtn" disabled>
+                    <i class="fas fa-trash-alt"></i>
+                    Delete All Data
+                </button>
+            </div>
         </div>
     </div>
 
@@ -614,8 +658,26 @@
                     </div>
                     <div class="logo-text">
                         <h1>Gujarat Raptor Survey</h1>
-                        <p>Field Data Collection Portal</p>
+                        <p>Analytics Dashboard</p>
                     </div>
+                </div>
+                <div class="header-actions">
+                    <div class="status-badge">
+                        <span class="status-dot"></span>
+                        Live Data
+                    </div>
+                    <button onclick="refreshData()" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i>
+                        Refresh
+                    </button>
+                    <button onclick="exportAllData()" class="btn btn-success">
+                        <i class="fas fa-download"></i>
+                        Export CSV
+                    </button>
+                    <button onclick="showDeleteConfirmation()" class="btn btn-danger">
+                        <i class="fas fa-trash-alt"></i>
+                        Delete All Data
+                    </button>
                 </div>
             </div>
         </div>
@@ -623,211 +685,130 @@
 
     <main class="main">
         <div class="container">
-            <section id="loginSection" class="section active">
-                <div class="page-header">
-                    <h2 class="page-title">Start New Survey</h2>
-                    <p class="page-subtitle">Enter your team details to begin data collection</p>
+            <div class="page-header">
+                <h2 class="page-title">Survey Analytics</h2>
+                <p class="page-subtitle">Real-time monitoring and analysis of field data</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon-wrapper primary">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="totalSurveys">0</h3>
+                        <p>Total Surveys</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-wrapper success">
+                        <i class="fas fa-dove"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="totalBirds">0</h3>
+                        <p>Total Birds Counted</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-wrapper warning">
+                        <i class="fas fa-map-marked-alt"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="totalLocations">0</h3>
+                        <p>Survey Locations</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-wrapper info">
+                        <i class="fas fa-feather"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="totalSpecies">0</h3>
+                        <p>Species Observed</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title-wrapper">
+                            <div class="card-icon">
+                                <i class="fas fa-chart-bar"></i>
+                            </div>
+                            <h3 class="card-title">Species Distribution</h3>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="speciesChart"></canvas>
+                    </div>
                 </div>
 
                 <div class="card">
                     <div class="card-header">
+                        <div class="card-title-wrapper">
+                            <div class="card-icon">
+                                <i class="fas fa-chart-pie"></i>
+                            </div>
+                            <h3 class="card-title">Survey Distribution</h3>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="locationChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title-wrapper">
                         <div class="card-icon">
-                            <i class="fas fa-clipboard-list"></i>
+                            <i class="fas fa-list-check"></i>
                         </div>
-                        <h3 class="card-title">Survey Information</h3>
-                    </div>
-
-                    <form id="loginForm">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label" for="teamCode">
-                                    Team Code <span class="required">*</span>
-                                </label>
-                                <div class="input-icon">
-                                    <i class="fas fa-users"></i>
-                                    <input type="text" class="form-input" id="teamCode" placeholder="e.g., TEAM001" required aria-required="true">
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label" for="teamSize">
-                                    Team Size <span class="required">*</span>
-                                </label>
-                                <div class="input-icon">
-                                    <i class="fas fa-user-friends"></i>
-                                    <input type="number" class="form-input" id="teamSize" value="4" min="1" max="20" required aria-required="true">
-                                </div>
-                            </div>
-
-                            <div class="form-group full-width">
-                                <label class="form-label" for="teamLeader">
-                                    Team Leader Name <span class="required">*</span>
-                                </label>
-                                <div class="input-icon">
-                                    <i class="fas fa-user-tie"></i>
-                                    <input type="text" class="form-input" id="teamLeader" placeholder="Full Name" required aria-required="true">
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label" for="location">
-                                    District <span class="required">*</span>
-                                </label>
-                                <select class="form-select" id="location" required aria-required="true">
-                                    <option value="">Select District</option>
-                                    <option value="Ahmedabad">Ahmedabad</option>
-                                    <option value="Amreli">Amreli</option>
-                                    <option value="Anand">Anand</option>
-                                    <option value="Aravalli">Aravalli</option>
-                                    <option value="Banaskantha">Banaskantha</option>
-                                    <option value="Bharuch">Bharuch</option>
-                                    <option value="Bhavnagar">Bhavnagar</option>
-                                    <option value="Botad">Botad</option>
-                                    <option value="Chhota Udaipur">Chhota Udaipur</option>
-                                    <option value="Dahod">Dahod</option>
-                                    <option value="Dang">Dang</option>
-                                    <option value="Devbhoomi Dwarka">Devbhoomi Dwarka</option>
-                                    <option value="Gandhinagar">Gandhinagar</option>
-                                    <option value="Gir Somnath">Gir Somnath</option>
-                                    <option value="Jamnagar">Jamnagar</option>
-                                    <option value="Junagadh">Junagadh</option>
-                                    <option value="Kheda">Kheda</option>
-                                    <option value="Kutch">Kutch</option>
-                                    <option value="Mahisagar">Mahisagar</option>
-                                    <option value="Mehsana">Mehsana</option>
-                                    <option value="Morbi">Morbi</option>
-                                    <option value="Narmada">Narmada</option>
-                                    <option value="Navsari">Navsari</option>
-                                    <option value="Panchmahal">Panchmahal</option>
-                                    <option value="Patan">Patan</option>
-                                    <option value="Porbandar">Porbandar</option>
-                                    <option value="Rajkot">Rajkot</option>
-                                    <option value="Sabarkantha">Sabarkantha</option>
-                                    <option value="Surat">Surat</option>
-                                    <option value="Surendranagar">Surendranagar</option>
-                                    <option value="Tapi">Tapi</option>
-                                    <option value="Vadodara">Vadodara</option>
-                                    <option value="Valsad">Valsad</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label" for="landmark">
-                                    Landmark
-                                </label>
-                                <div class="input-icon">
-                                    <i class="fas fa-map-marker-alt"></i>
-                                    <input type="text" class="form-input" id="landmark" placeholder="e.g., Gir Forest, Nalsarovar">
-                                </div>
-                                <p class="help-text">
-                                    <i class="fas fa-info-circle"></i>
-                                    Optional: Nearby landmark or area name
-                                </p>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label" for="latitude">
-                                    Latitude
-                                </label>
-                                <div class="input-icon">
-                                    <i class="fas fa-compass"></i>
-                                    <input type="text" class="form-input" id="latitude" placeholder="Auto-filled via GPS" readonly>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label" for="longitude">
-                                    Longitude
-                                </label>
-                                <div class="input-icon">
-                                    <i class="fas fa-compass"></i>
-                                    <input type="text" class="form-input" id="longitude" placeholder="Auto-filled via GPS" readonly>
-                                </div>
-                            </div>
-
-                            <div class="form-group full-width">
-                                <button type="button" id="getGpsBtn" class="btn btn-outline" style="width: 100%;">
-                                    <i class="fas fa-map-marked-alt"></i>
-                                    Get Current GPS Location
-                                </button>
-                                <p class="help-text">
-                                    <i class="fas fa-info-circle"></i>
-                                    Click to automatically capture your current coordinates
-                                </p>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 1.5rem;">
-                            <i class="fas fa-play"></i>
-                            Start Survey
-                        </button>
-                    </form>
-                </div>
-            </section>
-
-            <section id="surveySection" class="section">
-                <div class="page-header">
-                    <h2 class="page-title">Active Survey</h2>
-                    <p class="page-subtitle" id="surveySubtitle">Record raptor species observations</p>
-                </div>
-
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon-wrapper primary">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 id="surveyTime">--:--</h3>
-                            <p>Start Time</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon-wrapper success">
-                            <i class="fas fa-dove"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 id="totalBirds">0</h3>
-                            <p>Total Birds Counted</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon-wrapper warning">
-                            <i class="fas fa-map-pin"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3 id="surveyLocation">--</h3>
-                            <p>Survey Location</p>
-                        </div>
+                        <h3 class="card-title">Species Breakdown</h3>
                     </div>
                 </div>
+                <div class="species-breakdown" id="speciesBreakdown"></div>
+            </div>
 
-                <div class="card">
-                    <div class="card-header" style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">
-                        <div style="flex: 1;">
-                            <div class="action-bar">
-                                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                    <div class="card-icon">
-                                        <i class="fas fa-list-check"></i>
-                                    </div>
-                                    <h3 class="card-title">Species Observations</h3>
-                                </div>
-                                <button id="completeBtn" class="btn btn-success">
-                                    <i class="fas fa-check-circle"></i>
-                                    Complete Survey
-                                </button>
-                            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title-wrapper">
+                        <div class="card-icon">
+                            <i class="fas fa-map"></i>
                         </div>
-                    </div>
-
-                    <div style="padding-top: 1.5rem;">
-                        <div class="search-wrapper">
-                            <i class="fas fa-search"></i>
-                            <input type="text" id="searchSpecies" class="search-input" placeholder="Search species by name..." aria-label="Search species">
-                        </div>
-
-                        <div class="species-grid" id="speciesGrid"></div>
+                        <h3 class="card-title">Geographic Distribution</h3>
                     </div>
                 </div>
-            </section>
+                <div id="map"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title-wrapper">
+                        <div class="card-icon">
+                            <i class="fas fa-table"></i>
+                        </div>
+                        <h3 class="card-title">Survey Records</h3>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Team Code</th>
+                                <th>Team Leader</th>
+                                <th>Location</th>
+                                <th>Landmark</th>
+                                <th>Date & Time</th>
+                                <th>Total Birds</th>
+                                <th>Top Species</th>
+                            </tr>
+                        </thead>
+                        <tbody id="surveysTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -836,238 +817,465 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRlaWZycWpvemhmbW95dmxzcHFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4MDgxNjksImV4cCI6MjA4MjM4NDE2OX0.XeNUe0iT8WA9s62ewckjMrEzQL9ow1tN1HRnLNTVDVg';
         
         let dbClient;
-        
-        const RAPTOR_SPECIES = [
-            { name: "Black Kite", scientific: "Milvus migrans", common: true },
-            { name: "Brahminy Kite", scientific: "Haliastur indus", common: true },
-            { name: "Egyptian Vulture", scientific: "Neophron percnopterus", common: true },
-            { name: "White-rumped Vulture", scientific: "Gyps bengalensis", common: false },
-            { name: "Indian Vulture", scientific: "Gyps indicus", common: false },
-            { name: "Red-headed Vulture", scientific: "Sarcogyps calvus", common: false },
-            { name: "Short-toed Snake Eagle", scientific: "Circaetus gallicus", common: true },
-            { name: "Crested Serpent Eagle", scientific: "Spilornis cheela", common: true },
-            { name: "Shikra", scientific: "Accipiter badius", common: true },
-            { name: "Peregrine Falcon", scientific: "Falco peregrinus", common: false },
-            { name: "Common Kestrel", scientific: "Falco tinnunculus", common: true },
-            { name: "Barn Owl", scientific: "Tyto alba", common: true },
-            { name: "Spotted Owlet", scientific: "Athene brama", common: true }
-        ];
-
-        let appState = {
-            session: null,
-            currentSurvey: null
-        };
+        let surveys = [];
+        let map = null;
+        let speciesChart = null;
+        let locationChart = null;
 
         window.addEventListener('load', function() {
             if (window.supabase) {
                 dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                console.log('Dashboard: Database Connected');
+                loadSurveys();
+                setupRealtime();
+            } else {
+                console.error('Dashboard: Supabase library not loaded');
             }
         });
 
-        function showNotification(msg) {
-            const notif = document.getElementById('notification');
-            const text = document.getElementById('notificationText');
-            text.textContent = msg;
-            notif.classList.add('show');
-            setTimeout(function() { notif.classList.remove('show'); }, 3000);
-        }
-
-        document.getElementById('getGpsBtn').addEventListener('click', function() {
-            if (!navigator.geolocation) {
-                alert('GPS not supported by your browser');
+        async function loadSurveys() {
+            if (!dbClient) return;
+            
+            const { data, error } = await dbClient
+                .from('surveys')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('Error loading surveys:', error);
                 return;
             }
             
-            const latInput = document.getElementById('latitude');
-            const lonInput = document.getElementById('longitude');
-            const btn = this;
-            
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting Location...';
-            
-            latInput.placeholder = 'Acquiring GPS signal...';
-            lonInput.placeholder = 'Acquiring GPS signal...';
-            
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    const lat = position.coords.latitude.toFixed(6);
-                    const lon = position.coords.longitude.toFixed(6);
-                    
-                    latInput.value = lat;
-                    lonInput.value = lon;
-                    latInput.placeholder = 'Auto-filled via GPS';
-                    lonInput.placeholder = 'Auto-filled via GPS';
-                    
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-check"></i> Location Captured';
-                    
-                    showNotification('GPS coordinates captured successfully');
-                    
-                    setTimeout(function() {
-                        btn.innerHTML = '<i class="fas fa-map-marked-alt"></i> Get Current GPS Location';
-                    }, 2000);
-                },
-                function(error) {
-                    latInput.placeholder = 'GPS unavailable';
-                    lonInput.placeholder = 'GPS unavailable';
-                    
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-map-marked-alt"></i> Get Current GPS Location';
-                    
-                    let msg = 'Unable to get GPS location. ';
-                    if (error.code === 1) msg += 'Please allow location access in browser settings.';
-                    else if (error.code === 2) msg += 'GPS signal unavailable. Try moving to an open area.';
-                    else if (error.code === 3) msg += 'Request timed out. Please try again.';
-                    
-                    alert(msg);
-                }
-            );
-        });
+            surveys = data || [];
+            updateDashboard();
+        }
 
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            appState.session = {
-                team_code: document.getElementById('teamCode').value.toUpperCase(),
-                team_leader: document.getElementById('teamLeader').value,
-                team_size: parseInt(document.getElementById('teamSize').value),
-                location: document.getElementById('location').value,
-                landmark: document.getElementById('landmark').value || null,
-                latitude: document.getElementById('latitude').value || null,
-                longitude: document.getElementById('longitude').value || null,
-                start_time: new Date().toISOString(),
-                counts: {}
+        function updateDashboard() {
+            updateStats();
+            updateTable();
+            updateMap();
+            updateSpeciesBreakdown();
+            updateCharts();
+        }
+
+        function updateStats() {
+            const stats = {
+                surveys: surveys.length,
+                birds: 0,
+                locations: new Set(),
+                species: new Set()
             };
-            
-            appState.currentSurvey = JSON.parse(JSON.stringify(appState.session));
-            
-            document.getElementById('loginSection').classList.remove('active');
-            document.getElementById('surveySection').classList.add('active');
-            
-            document.getElementById('surveyTime').textContent = new Date().toLocaleTimeString();
-            document.getElementById('surveyLocation').textContent = appState.session.location;
-            document.getElementById('surveySubtitle').textContent = 'Team ' + appState.session.team_code + ' • ' + appState.session.location;
-            
-            renderSpecies();
-            showNotification('Survey started successfully');
-            
-            window.scrollTo(0, 0);
-        });
 
-        function renderSpecies() {
-            const grid = document.getElementById('speciesGrid');
-            grid.innerHTML = RAPTOR_SPECIES.map(function(species) {
-                const count = appState.currentSurvey.counts[species.name] || 0;
-                const id = species.name.replace(/ /g, '-');
-                return '<div class="species-card" data-name="' + species.name.toLowerCase() + '">' +
-                    '<div class="species-header">' +
-                    '<div class="species-info">' +
-                    '<h4>' + species.name + '</h4>' +
-                    '<p>' + species.scientific + '</p>' +
-                    '</div>' +
-                    '<span class="species-badge ' + (species.common ? 'common' : 'rare') + '">' +
-                    (species.common ? 'Common' : 'Rare') + '</span>' +
-                    '</div>' +
-                    '<div class="counter-wrapper">' +
-                    '<button class="counter-btn minus" onclick="updateCount(\'' + species.name + '\', -1)" ' + 
-                    'aria-label="Decrease count for ' + species.name + '" ' + (count === 0 ? 'disabled' : '') + '>' +
-                    '<i class="fas fa-minus"></i></button>' +
-                    '<div class="counter-value" id="count-' + id + '" aria-live="polite" aria-atomic="true">' + count + '</div>' +
-                    '<button class="counter-btn plus" onclick="updateCount(\'' + species.name + '\', 1)" ' +
-                    'aria-label="Increase count for ' + species.name + '">' +
-                    '<i class="fas fa-plus"></i></button>' +
-                    '</div></div>';
+            surveys.forEach(function(survey) {
+                stats.locations.add(survey.location);
+                const counts = survey.counts || {};
+                Object.entries(counts).forEach(function([species, count]) {
+                    stats.birds += count;
+                    if (count > 0) stats.species.add(species);
+                });
+            });
+
+            document.getElementById('totalSurveys').textContent = stats.surveys;
+            document.getElementById('totalBirds').textContent = stats.birds;
+            document.getElementById('totalLocations').textContent = stats.locations.size;
+            document.getElementById('totalSpecies').textContent = stats.species.size;
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('surveysTableBody');
+            
+            if (surveys.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="empty-state">' +
+                    '<i class="fas fa-inbox"></i>' +
+                    '<h3>No Survey Data</h3>' +
+                    '<p>Survey data will appear here once field teams submit their observations.</p>' +
+                    '</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = surveys.map(function(survey) {
+                const counts = survey.counts || {};
+                const total = Object.values(counts).reduce(function(a, b) { return a + b; }, 0);
+                const date = new Date(survey.start_time);
+                
+                let topSpecies = '-';
+                if (total > 0) {
+                    const sorted = Object.entries(counts).sort(function(a, b) { return b[1] - a[1]; });
+                    if (sorted.length > 0 && sorted[0][1] > 0) {
+                        topSpecies = sorted[0][0] + ' (' + sorted[0][1] + ')';
+                    }
+                }
+                
+                return '<tr>' +
+                    '<td><span class="badge badge-primary">' + survey.team_code + '</span></td>' +
+                    '<td>' + survey.team_leader + '</td>' +
+                    '<td>' + survey.location + '</td>' +
+                    '<td>' + (survey.landmark || '-') + '</td>' +
+                    '<td>' + date.toLocaleDateString() + ' ' + date.toLocaleTimeString() + '</td>' +
+                    '<td><strong>' + total + '</strong></td>' +
+                    '<td>' + topSpecies + '</td>' +
+                    '</tr>';
             }).join('');
         }
 
-        window.updateCount = function(species, change) {
-            if (!appState.currentSurvey.counts[species]) {
-                appState.currentSurvey.counts[species] = 0;
-            }
-            appState.currentSurvey.counts[species] += change;
-            if (appState.currentSurvey.counts[species] < 0) {
-                appState.currentSurvey.counts[species] = 0;
-            }
-            
-            const id = species.replace(/ /g, '-');
-            document.getElementById('count-' + id).textContent = appState.currentSurvey.counts[species];
-            
-            let total = 0;
-            for (let key in appState.currentSurvey.counts) {
-                total += appState.currentSurvey.counts[key];
-            }
-            document.getElementById('totalBirds').textContent = total;
-            
-            renderSpecies();
-        };
+        function updateMap() {
+            const mapEl = document.getElementById('map');
+            if (!mapEl) return;
 
-        document.getElementById('searchSpecies').addEventListener('keyup', function() {
-            const search = this.value.toLowerCase();
-            const cards = document.querySelectorAll('.species-card');
-            for (let i = 0; i < cards.length; i++) {
-                const name = cards[i].getAttribute('data-name');
-                cards[i].style.display = name.includes(search) ? 'block' : 'none';
+            if (!map) {
+                map = L.map('map').setView([22.2587, 71.1924], 7);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 18
+                }).addTo(map);
+            } else {
+                map.eachLayer(function(layer) {
+                    if (layer instanceof L.CircleMarker || layer instanceof L.Marker) {
+                        map.removeLayer(layer);
+                    }
+                });
             }
+
+            const validSurveys = surveys.filter(function(s) {
+                return s.latitude && s.longitude;
+            });
+
+            if (validSurveys.length === 0) return;
+
+            validSurveys.forEach(function(survey) {
+                const counts = survey.counts || {};
+                const total = Object.values(counts).reduce(function(a, b) { return a + b; }, 0);
+                
+                const radius = Math.min(total / 2 + 8, 30);
+                
+                L.circleMarker([parseFloat(survey.latitude), parseFloat(survey.longitude)], {
+                    radius: radius,
+                    fillColor: '#1e40af',
+                    color: '#fff',
+                    weight: 2,
+                    fillOpacity: 0.7
+                }).addTo(map).bindPopup(
+                    '<div style="font-family: Inter, sans-serif; min-width: 200px;">' +
+                    '<strong style="font-size: 14px; color: #1f2937;">' + survey.location + '</strong><br>' +
+                    '<strong style="color: #6b7280;">Team:</strong> ' + survey.team_code + '<br>' +
+                    (survey.landmark ? '<strong style="color: #6b7280;">Landmark:</strong> ' + survey.landmark + '<br>' : '') +
+                    '<strong style="color: #6b7280;">Total Birds:</strong> ' + total + '<br>' +
+                    '<strong style="color: #6b7280;">Leader:</strong> ' + survey.team_leader +
+                    '</div>'
+                );
+            });
+
+            if (validSurveys.length > 0) {
+                const bounds = L.latLngBounds(validSurveys.map(function(s) {
+                    return [parseFloat(s.latitude), parseFloat(s.longitude)];
+                }));
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
+
+        function updateSpeciesBreakdown() {
+            const speciesCounts = {};
+            
+            surveys.forEach(function(survey) {
+                const counts = survey.counts || {};
+                Object.entries(counts).forEach(function([species, count]) {
+                    if (!speciesCounts[species]) {
+                        speciesCounts[species] = 0;
+                    }
+                    speciesCounts[species] += count;
+                });
+            });
+
+            const sorted = Object.entries(speciesCounts).sort(function(a, b) { return b[1] - a[1]; });
+            
+            const container = document.getElementById('speciesBreakdown');
+            
+            if (sorted.length === 0) {
+                container.innerHTML = '<div class="empty-state" style="grid-column: 1 / -1;">' +
+                    '<i class="fas fa-feather"></i>' +
+                    '<h3>No Species Data</h3>' +
+                    '<p>Species observations will appear here once surveys are completed.</p>' +
+                    '</div>';
+                return;
+            }
+
+            container.innerHTML = sorted.map(function([species, count]) {
+                return '<div class="species-stat">' +
+                    '<div class="species-stat-header">' +
+                    '<div><h4>' + species + '</h4></div>' +
+                    '<div class="species-count">' + count + '</div>' +
+                    '</div>' +
+                    '</div>';
+            }).join('');
+        }
+
+        function updateCharts() {
+            updateSpeciesChart();
+            updateLocationChart();
+        }
+
+        function updateSpeciesChart() {
+            const speciesCounts = {};
+            
+            surveys.forEach(function(survey) {
+                const counts = survey.counts || {};
+                Object.entries(counts).forEach(function([species, count]) {
+                    if (!speciesCounts[species]) {
+                        speciesCounts[species] = 0;
+                    }
+                    speciesCounts[species] += count;
+                });
+            });
+
+            const sorted = Object.entries(speciesCounts).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 10);
+            
+            const ctx = document.getElementById('speciesChart');
+            
+            if (speciesChart) {
+                speciesChart.destroy();
+            }
+
+            if (sorted.length === 0) {
+                ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+                return;
+            }
+
+            speciesChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sorted.map(function(x) { return x[0]; }),
+                    datasets: [{
+                        label: 'Number of Observations',
+                        data: sorted.map(function(x) { return x[1]; }),
+                        backgroundColor: 'rgba(30, 64, 175, 0.8)',
+                        borderColor: 'rgba(30, 64, 175, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateLocationChart() {
+            const locationCounts = {};
+            
+            surveys.forEach(function(survey) {
+                if (!locationCounts[survey.location]) {
+                    locationCounts[survey.location] = 0;
+                }
+                locationCounts[survey.location]++;
+            });
+
+            const sorted = Object.entries(locationCounts).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 8);
+            
+            const ctx = document.getElementById('locationChart');
+            
+            if (locationChart) {
+                locationChart.destroy();
+            }
+
+            if (sorted.length === 0) {
+                ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+                return;
+            }
+
+            const colors = [
+                'rgba(30, 64, 175, 0.8)',
+                'rgba(5, 150, 105, 0.8)',
+                'rgba(217, 119, 6, 0.8)',
+                'rgba(8, 145, 178, 0.8)',
+                'rgba(220, 38, 38, 0.8)',
+                'rgba(124, 58, 237, 0.8)',
+                'rgba(236, 72, 153, 0.8)',
+                'rgba(14, 165, 233, 0.8)'
+            ];
+
+            locationChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: sorted.map(function(x) { return x[0]; }),
+                    datasets: [{
+                        data: sorted.map(function(x) { return x[1]; }),
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+
+        function exportAllData() {
+            if (surveys.length === 0) {
+                alert('No data to export');
+                return;
+            }
+
+            let csv = 'Team Code,Leader,Team Size,Location,Landmark,Latitude,Longitude,Start Date,Start Time,End Date,End Time,Total Birds,Species Details\n';
+            
+            surveys.forEach(function(survey) {
+                const counts = survey.counts || {};
+                const total = Object.values(counts).reduce(function(a, b) { return a + b; }, 0);
+                const startDate = new Date(survey.start_time);
+                const endDate = survey.end_time ? new Date(survey.end_time) : null;
+                
+                const speciesDetails = Object.entries(counts)
+                    .filter(function(x) { return x[1] > 0; })
+                    .map(function(x) { return x[0] + ': ' + x[1]; })
+                    .join('; ');
+                
+                csv += survey.team_code + ',';
+                csv += '"' + survey.team_leader + '",';
+                csv += (survey.team_size || '') + ',';
+                csv += survey.location + ',';
+                csv += '"' + (survey.landmark || '') + '",';
+                csv += (survey.latitude || '') + ',';
+                csv += (survey.longitude || '') + ',';
+                csv += startDate.toLocaleDateString() + ',';
+                csv += startDate.toLocaleTimeString() + ',';
+                csv += (endDate ? endDate.toLocaleDateString() : '') + ',';
+                csv += (endDate ? endDate.toLocaleTimeString() : '') + ',';
+                csv += total + ',';
+                csv += '"' + speciesDetails + '"\n';
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'raptor-survey-' + new Date().toISOString().split('T')[0] + '.csv');
+            link.click();
+        }
+
+        function refreshData() {
+            loadSurveys();
+        }
+
+        function setupRealtime() {
+            if (!dbClient) return;
+            
+            setTimeout(function() {
+                const channel = dbClient
+                    .channel('surveys-channel')
+                    .on('postgres_changes', 
+                        { event: '*', schema: 'public', table: 'surveys' },
+                        function(payload) {
+                            console.log('Real-time update:', payload);
+                            loadSurveys();
+                        }
+                    )
+                    .subscribe();
+            }, 2000);
+        }
+
+        setInterval(refreshData, 30000);
+
+        // Delete All Data Functions
+        function showDeleteConfirmation() {
+            if (surveys.length === 0) {
+                alert('No data to delete.');
+                return;
+            }
+
+            document.getElementById('deleteCount').textContent = surveys.length;
+            document.getElementById('confirmText').value = '';
+            document.getElementById('confirmDeleteBtn').disabled = true;
+            document.getElementById('deleteModal').classList.add('active');
+            
+            // Focus on input
+            setTimeout(function() {
+                document.getElementById('confirmText').focus();
+            }, 100);
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('active');
+            document.getElementById('confirmText').value = '';
+        }
+
+        // Enable delete button when correct text is entered
+        document.addEventListener('DOMContentLoaded', function() {
+            const confirmInput = document.getElementById('confirmText');
+            const confirmBtn = document.getElementById('confirmDeleteBtn');
+            
+            if (confirmInput) {
+                confirmInput.addEventListener('input', function() {
+                    confirmBtn.disabled = this.value !== 'DELETE ALL DATA';
+                });
+            }
+
+            // Close modal on overlay click
+            document.getElementById('deleteModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeDeleteModal();
+                }
+            });
+
+            // Close modal on Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeDeleteModal();
+                }
+            });
         });
 
-        document.getElementById('completeBtn').addEventListener('click', async function() {
-            let total = 0;
-            for (let key in appState.currentSurvey.counts) {
-                total += appState.currentSurvey.counts[key];
-            }
-            
-            if (total === 0) {
-                alert('Please count at least one bird before completing the survey.');
-                return;
-            }
-            
-            if (!confirm('Are you sure you want to complete this survey?\n\nTotal birds counted: ' + total)) {
-                return;
-            }
-            
+        async function confirmDeleteAll() {
             if (!dbClient) {
-                alert('Database connection unavailable. Please check your internet connection.');
+                alert('Database connection unavailable.');
                 return;
             }
+
+            const confirmBtn = document.getElementById('confirmDeleteBtn');
+            const originalText = confirmBtn.innerHTML;
             
-            const btn = this;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-            
-            appState.currentSurvey.end_time = new Date().toISOString();
-            
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+
             try {
-                const result = await dbClient.from('surveys').insert([appState.currentSurvey]).select();
-                
-                if (result.error) {
-                    throw new Error(result.error.message);
+                // Delete all surveys
+                const { error } = await dbClient
+                    .from('surveys')
+                    .delete()
+                    .neq('id', 0); // Delete all records where id != 0 (which is all records)
+
+                if (error) {
+                    throw new Error(error.message);
                 }
+
+                // Success
+                closeDeleteModal();
+                surveys = [];
+                updateDashboard();
                 
-                showNotification('Survey completed and saved successfully');
-                
-                alert('Survey Completed Successfully!\n\nTotal Birds: ' + total + '\nTeam: ' + appState.session.team_code + '\nLocation: ' + appState.session.location + '\n\nData has been saved to the central database.');
-                
-                document.getElementById('loginForm').reset();
-                document.getElementById('latitude').value = '';
-                document.getElementById('longitude').value = '';
-                
-                document.getElementById('surveySection').classList.remove('active');
-                document.getElementById('loginSection').classList.add('active');
-                
-                appState.session = null;
-                appState.currentSurvey = null;
-                
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-check-circle"></i> Complete Survey';
-                
-                window.scrollTo(0, 0);
+                alert('All survey data has been permanently deleted.');
                 
             } catch (err) {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-check-circle"></i> Complete Survey';
-                alert('Error saving survey: ' + err.message + '\n\nPlease check your internet connection and try again.');
+                console.error('Error deleting data:', err);
+                alert('Error deleting data: ' + err.message);
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = originalText;
             }
-        });
+        }
     </script>
 </body>
 </html>
